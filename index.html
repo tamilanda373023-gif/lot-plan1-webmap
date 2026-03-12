@@ -18,8 +18,14 @@
             padding: 0;
             margin: 0;
         }
+        /* Style for the Lot Tooltips to ensure they stay clear */
+        .css_LotPolygon1_0 {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
         </style>
-        <title></title>
+        <title>Johor Lot Map</title>
     </head>
     <body>
         <div id="map">
@@ -41,10 +47,18 @@
         var map = L.map('map', {
             zoomControl:false, maxZoom:28, minZoom:1
         }).fitBounds([[2.0604938384780547,103.58092451071019],[2.0624260209193577,103.58330408369544]]);
+        
         var hash = new L.Hash(map);
-        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com">Leaflet</a>');
         var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
-        // remove popup's row if "visible-with-data"
+
+        // --- GOOGLE SATELLITE LAYER ---
+        var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 28,
+            subdomains:['mt0','mt1','mt2','mt3'],
+            attribution: '&copy; Google'
+        }).addTo(map);
+
         function removeEmptyRowsFromPopupContent(content, feature) {
          var tempDiv = document.createElement('div');
          tempDiv.innerHTML = content;
@@ -58,105 +72,52 @@
          }
          return tempDiv.innerHTML;
         }
-        // modify popup if contains media
+
         function addClassToPopupIfMedia(content, popup) {
             var tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
             var imgTd = tempDiv.querySelector('td img');
             if (imgTd) {
-                var src = imgTd.getAttribute('src');
-                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
-                    popup._contentNode.classList.add('media');
-                    setTimeout(function() {
-                        popup.update();
-                    }, 10);
-                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
-                    var audio = document.createElement('audio');
-                    audio.controls = true;
-                    audio.src = src;
-                    imgTd.parentNode.replaceChild(audio, imgTd);
-                    popup._contentNode.classList.add('media');
-                    setTimeout(function() {
-                        popup.setContent(tempDiv.innerHTML);
-                        popup.update();
-                    }, 10);
-                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
-                    var video = document.createElement('video');
-                    video.controls = true;
-                    video.src = src;
-                    video.style.width = "400px";
-                    video.style.height = "300px";
-                    video.style.maxHeight = "60vh";
-                    video.style.maxWidth = "60vw";
-                    imgTd.parentNode.replaceChild(video, imgTd);
-                    popup._contentNode.classList.add('media');
-                    // Aggiorna il popup quando il video carica i metadati
-                    video.addEventListener('loadedmetadata', function() {
-                        popup.update();
-                    });
-                    setTimeout(function() {
-                        popup.setContent(tempDiv.innerHTML);
-                        popup.update();
-                    }, 10);
-                } else {
-                    popup._contentNode.classList.remove('media');
-                }
-            } else {
-                popup._contentNode.classList.remove('media');
+                popup._contentNode.classList.add('media');
+                setTimeout(function() { popup.update(); }, 10);
             }
         }
-        var zoomControl = L.control.zoom({
-            position: 'topleft'
-        }).addTo(map);
+
+        var zoomControl = L.control.zoom({ position: 'topleft' }).addTo(map);
         var bounds_group = new L.featureGroup([]);
-        function setBounds() {
-        }
+
         function pop_LotPolygon1_0(feature, layer) {
             var popupContent = '<table>\
-                    <tr>\
-                        <th scope="row">Lot</th>\
-                        <td>' + (feature.properties['Lot'] !== null ? autolinker.link(String(feature.properties['Lot']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">tsp — pemilik_PEMILIK</th>\
-                        <td>' + (feature.properties['tsp — pemilik_PEMILIK'] !== null ? autolinker.link(String(feature.properties['tsp — pemilik_PEMILIK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">tsp — hakmilik_DAERAH</th>\
-                        <td>' + (feature.properties['tsp — hakmilik_DAERAH'] !== null ? autolinker.link(String(feature.properties['tsp — hakmilik_DAERAH']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">tsp — hakmilik_NO_PA</th>\
-                        <td>' + (feature.properties['tsp — hakmilik_NO_PA'] !== null ? autolinker.link(String(feature.properties['tsp — hakmilik_NO_PA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
+                    <tr><th scope="row">Lot</th><td>' + (feature.properties['Lot'] !== null ? autolinker.link(String(feature.properties['Lot'])) : '') + '</td>\</tr>\
+                    <tr><th scope="row">Pemilik</th><td>' + (feature.properties['tsp — pemilik_PEMILIK'] !== null ? autolinker.link(String(feature.properties['tsp — pemilik_PEMILIK'])) : '') + '</td>\</tr>\
+                    <tr><th scope="row">Daerah</th><td>' + (feature.properties['tsp — hakmilik_DAERAH'] !== null ? autolinker.link(String(feature.properties['tsp — hakmilik_DAERAH'])) : '') + '</td>\</tr>\
+                    <tr><th scope="row">No PA</th><td>' + (feature.properties['tsp — hakmilik_NO_PA'] !== null ? autolinker.link(String(feature.properties['tsp — hakmilik_NO_PA'])) : '') + '</td>\</tr>\
                 </table>';
             var content = removeEmptyRowsFromPopupContent(popupContent, feature);
-			layer.on('popupopen', function(e) {
-				addClassToPopupIfMedia(content, e.popup);
-			});
-			layer.bindPopup(content, { maxHeight: 400 });
+            layer.on('popupopen', function(e) { addClassToPopupIfMedia(content, e.popup); });
+            layer.bindPopup(content, { maxHeight: 400 });
         }
 
         function style_LotPolygon1_0_0() {
             return {
                 pane: 'pane_LotPolygon1_0',
                 opacity: 1,
-                color: 'rgba(35,35,35,1.0)',
+                color: 'rgba(255,255,255,1.0)', // White outline for visibility
                 dashArray: '',
                 lineCap: 'butt',
                 lineJoin: 'miter',
-                weight: 1.0, 
+                weight: 2.0, 
                 fill: true,
-                fillOpacity: 1,
+                fillOpacity: 0.3, // Semi-transparent so you can see satellite below
                 fillColor: 'rgba(164,113,88,1.0)',
                 interactive: true,
             }
         }
+
         map.createPane('pane_LotPolygon1_0');
         map.getPane('pane_LotPolygon1_0').style.zIndex = 400;
-        map.getPane('pane_LotPolygon1_0').style['mix-blend-mode'] = 'normal';
+        
         var layer_LotPolygon1_0 = new L.geoJson(json_LotPolygon1_0, {
-            attribution: '',
             interactive: true,
             dataVar: 'json_LotPolygon1_0',
             layerName: 'layer_LotPolygon1_0',
@@ -166,100 +127,25 @@
         });
         bounds_group.addLayer(layer_LotPolygon1_0);
         map.addLayer(layer_LotPolygon1_0);
-        function pop_Boundarypoints_1(feature, layer) {
-            var popupContent = '<table>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['vertex_index'] !== null ? autolinker.link(String(feature.properties['vertex_index']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['vertex_part'] !== null ? autolinker.link(String(feature.properties['vertex_part']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['vertex_part_ring'] !== null ? autolinker.link(String(feature.properties['vertex_part_ring']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['vertex_part_index'] !== null ? autolinker.link(String(feature.properties['vertex_part_index']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['distance'] !== null ? autolinker.link(String(feature.properties['distance']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['angle'] !== null ? autolinker.link(String(feature.properties['angle']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['X'] !== null ? autolinker.link(String(feature.properties['X']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                </table>';
-            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
-			layer.on('popupopen', function(e) {
-				addClassToPopupIfMedia(content, e.popup);
-			});
-			layer.bindPopup(content, { maxHeight: 400 });
-        }
 
-        function style_Boundarypoints_1_0() {
-            return {
-                pane: 'pane_Boundarypoints_1',
-                radius: 4.0,
-                opacity: 1,
-                color: 'rgba(35,35,35,1.0)',
-                dashArray: '',
-                lineCap: 'butt',
-                lineJoin: 'miter',
-                weight: 1,
-                fill: true,
-                fillOpacity: 1,
-                fillColor: 'rgba(196,60,57,1.0)',
-                interactive: true,
-            }
-        }
-        map.createPane('pane_Boundarypoints_1');
-        map.getPane('pane_Boundarypoints_1').style.zIndex = 401;
-        map.getPane('pane_Boundarypoints_1').style['mix-blend-mode'] = 'normal';
-        var layer_Boundarypoints_1 = new L.geoJson(json_Boundarypoints_1, {
-            attribution: '',
-            interactive: true,
-            dataVar: 'json_Boundarypoints_1',
-            layerName: 'layer_Boundarypoints_1',
-            pane: 'pane_Boundarypoints_1',
-            onEachFeature: pop_Boundarypoints_1,
-            pointToLayer: function (feature, latlng) {
-                var context = {
-                    feature: feature,
-                    variables: {}
-                };
-                return L.circleMarker(latlng, style_Boundarypoints_1_0(feature));
-            },
-        });
-        bounds_group.addLayer(layer_Boundarypoints_1);
-        map.addLayer(layer_Boundarypoints_1);
-        setBounds();
+        // Labels modification - Larger, Bold, and Shadowed
         var i = 0;
         layer_LotPolygon1_0.eachLayer(function(layer) {
-            var context = {
-                feature: layer.feature,
-                variables: {}
-            };
-            layer.bindTooltip((layer.feature.properties['Lot'] !== null?String('<div style="color: #323232; font-size: 10pt; font-family: \'Arial\', sans-serif;">' + layer.feature.properties['Lot']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_LotPolygon1_0'});
+            var labelContent = '<div style="color: #ffffff; font-size: 18px; font-weight: bold; font-family: \'Arial\', sans-serif; text-shadow: 2px 2px 3px #000000;">' + layer.feature.properties['Lot'] + '</div>';
+            layer.bindTooltip((layer.feature.properties['Lot'] !== null ? String(labelContent) : ''), {
+                permanent: true, 
+                direction: 'center',
+                className: 'css_LotPolygon1_0'
+            });
             labels.push(layer);
-            totalMarkers += 1;
-              layer.added = true;
-              addLabel(layer, i);
-              i++;
         });
+
+        // Layer Control to switch between Satellite and Standard (Optional)
+        var baseMaps = { "Google Satellite": googleSat };
+        L.control.layers(baseMaps, {"Lot Polygons": layer_LotPolygon1_0}).addTo(map);
+
         resetLabels([layer_LotPolygon1_0]);
-        map.on("zoomend", function(){
-            resetLabels([layer_LotPolygon1_0]);
-        });
-        map.on("layeradd", function(){
-            resetLabels([layer_LotPolygon1_0]);
-        });
-        map.on("layerremove", function(){
-            resetLabels([layer_LotPolygon1_0]);
-        });
-        </script>        
+        map.on("zoomend", function(){ resetLabels([layer_LotPolygon1_0]); });
+        </script>
     </body>
 </html>
